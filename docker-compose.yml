@@ -1,11 +1,23 @@
 version: '3'
 
+x-app: &app
+    build: .
+    volumes:
+        - .:/rails
+    depends_on:
+        - db
+        - redis
+        - test
+    environment:
+        - DATABASE_URL=${DATABASE_URL}/${DATABASE_NAME_PRODUCTION}
+        - REDIS_URL=redis://redis:6379/0
+
 services:
     db:
         image: postgres:16-alpine
         environment:
-          - POSTGRES_USER=postgres
-          - POSTGRES_PASSWORD=password
+          - POSTGRES_USER=${POSTGRES_USER}
+          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
         ports:
             - '5432:5432'
         volumes:
@@ -15,19 +27,26 @@ services:
         ports:
         - '6379:6379'
         volumes:
-        - redis_data:/data  
+        - redis_data:/data
     web:
-        ## TODO
+        <<: *app
+        command: bundle exec rails server -b 0.0.0.0
+        ports:
+            - 3000:3000
+    sidekiq:
+        <<: *app
+        command: bundle exec sidekiq
     test:
         build: .
-        command: bundle exec rspec
+        command: sh -c "bundle exec rails db:create db:migrate && bundle exec rspec"
         volumes:
             - .:/rails
         depends_on:
             - db
-            - redis 
+            - redis
         environment:
-            - DATABASE_URL: postgresql://postgres:password@db:5432/myapp_test
-            - REDIS_URL: redis://redis:6379/0
+            - DATABASE_URL=${DATABASE_URL}/${DATABASE_NAME_TEST}
+            - REDIS_URL=redis://redis:6379/0
 volumes:
     postgres13:
+    redis_data:
