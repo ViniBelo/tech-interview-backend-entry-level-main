@@ -163,4 +163,84 @@ RSpec.describe "/carts", type: :request do
       end
     end
   end
+
+  describe "DELETE /cart/:product_id" do
+    let(:product) { create(:product) }
+
+    context 'when no cart exists in the session' do
+      it 'returns not found' do
+        delete "/cart/#{product.id}", as: :json
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when the product is in the cart' do
+      before { post '/cart', params: { product_id: product.id, quantity: 2 }, as: :json }
+
+      it 'returns ok' do
+        delete "/cart/#{product.id}", as: :json
+        expect(response).to have_http_status(:ok)
+      end
+
+      it 'removes the item from the cart' do
+        expect {
+          delete "/cart/#{product.id}", as: :json
+        }.to change(CartItem, :count).by(-1)
+      end
+
+      it 'updates the total_price to zero' do
+        delete "/cart/#{product.id}", as: :json
+        expect(JSON.parse(response.body)['total_price'].to_f).to eq(0.0)
+      end
+
+      it 'destroys the cart when last item is removed' do
+        expect {
+          delete "/cart/#{product.id}", as: :json
+        }.to change(Cart, :count).by(-1)
+      end
+    end
+
+    context 'when the cart has multiple items' do
+      let(:other_product) { create(:product) }
+
+      before do
+        post '/cart', params: { product_id: product.id, quantity: 1 }, as: :json
+        post '/cart', params: { product_id: other_product.id, quantity: 1 }, as: :json
+      end
+
+      it 'only removes the specified item' do
+        expect {
+          delete "/cart/#{product.id}", as: :json
+        }.to change(CartItem, :count).by(-1)
+      end
+
+      it 'does not destroy the cart' do
+        expect {
+          delete "/cart/#{product.id}", as: :json
+        }.not_to change(Cart, :count)
+      end
+
+      it 'recalculates the total_price' do
+        delete "/cart/#{product.id}", as: :json
+        expect(JSON.parse(response.body)['total_price'].to_f).to eq(other_product.price)
+      end
+    end
+
+    context 'when the product is not in the cart' do
+      let(:other_product) { create(:product) }
+
+      before { post '/cart', params: { product_id: product.id, quantity: 1 }, as: :json }
+
+      it 'returns unprocessable_entity' do
+        delete "/cart/#{other_product.id}", as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+
+      it 'does not remove any item' do
+        expect {
+          delete "/cart/#{other_product.id}", as: :json
+        }.not_to change(CartItem, :count)
+      end
+    end
+  end
 end
