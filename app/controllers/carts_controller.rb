@@ -1,10 +1,18 @@
 class CartsController < ApplicationController
   before_action :set_or_create_cart, only: %i[create]
-  before_action :set_cart, only: %i[show]
+  before_action :set_cart, only: %i[show add_item]
 
   def create
     if @cart.add_item(cart_params)
       render json: CartSerializer.new(@cart).as_json, status: :created
+    else
+      render json: @cart.errors, status: :unprocessable_entity
+    end
+  end
+
+  def add_item
+    if @cart.change_item_quantity(cart_params)
+      render json: CartSerializer.new(@cart).as_json
     else
       render json: @cart.errors, status: :unprocessable_entity
     end
