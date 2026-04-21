@@ -50,6 +50,45 @@ RSpec.describe "/carts", type: :request do
     end
   end
 
+  describe "GET /cart" do
+    context 'when no cart exists in the session' do
+      it 'returns not found' do
+        get '/cart', as: :json
+        expect(response).to have_http_status(:not_found)
+      end
+
+      it 'does not create a cart' do
+        expect { get '/cart', as: :json }.not_to change(Cart, :count)
+      end
+    end
+
+    context 'when a cart exists in the session' do
+      let(:product) { create(:product) }
+
+      before { post '/cart', params: { product_id: product.id, quantity: 2 }, as: :json }
+
+      it 'returns ok' do
+        get '/cart', as: :json
+        expect(response).to have_http_status(:ok)
+      end
+
+      it 'returns the cart id' do
+        get '/cart', as: :json
+        expect(JSON.parse(response.body)).to have_key('id')
+      end
+
+      it 'returns the cart items' do
+        get '/cart', as: :json
+        expect(JSON.parse(response.body)['products'].length).to eq(1)
+      end
+
+      it 'returns the correct total_price' do
+        get '/cart', as: :json
+        expect(JSON.parse(response.body)['total_price'].to_f).to eq(product.price * 2)
+      end
+    end
+  end
+
   describe "POST /add_items" do
     let(:cart) { Cart.create }
     let(:product) { Product.create(name: "Test Product", price: 10.0) }
