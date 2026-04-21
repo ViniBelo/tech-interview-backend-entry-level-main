@@ -89,19 +89,77 @@ RSpec.describe "/carts", type: :request do
     end
   end
 
-  describe "POST /add_items" do
-    let(:cart) { Cart.create }
-    let(:product) { Product.create(name: "Test Product", price: 10.0) }
-    let!(:cart_item) { CartItem.create(cart: cart, product: product, quantity: 1) }
+  describe "POST /add_item" do
+    let(:product) { create(:product) }
+
+    context 'when no cart exists in the session' do
+      it 'returns not found' do
+        post '/cart/add_item', params: { product_id: product.id, quantity: 1 }, as: :json
+        expect(response).to have_http_status(:not_found)
+      end
+    end
 
     context 'when the product already is in the cart' do
+      before { post '/cart', params: { product_id: product.id, quantity: 1 }, as: :json }
+
       subject do
-        post '/cart/add_items', params: { product_id: product.id, quantity: 1 }, as: :json
-        post '/cart/add_items', params: { product_id: product.id, quantity: 1 }, as: :json
+        post '/cart/add_item', params: { product_id: product.id, quantity: 1 }, as: :json
+        post '/cart/add_item', params: { product_id: product.id, quantity: 1 }, as: :json
       end
 
       it 'updates the quantity of the existing item in the cart' do
+        cart_item = CartItem.last
         expect { subject }.to change { cart_item.reload.quantity }.by(2)
+      end
+
+      it 'returns ok' do
+        subject
+        expect(response).to have_http_status(:ok)
+      end
+
+      it 'returns the updated cart' do
+        subject
+        json = JSON.parse(response.body)
+        expect(json).to include('id', 'products', 'total_price')
+      end
+
+      it 'updates the total_price correctly' do
+        subject
+        json = JSON.parse(response.body)
+        expect(json['total_price'].to_f).to eq(product.price * 3)
+      end
+
+      it 'does not create a new cart item' do
+        expect { subject }.not_to change(CartItem, :count)
+      end
+
+      it 'decreases quantity when negative value keeps result above 0' do
+        post '/cart/add_item', params: { product_id: product.id, quantity: 2 }, as: :json
+        cart_item = CartItem.last
+        expect {
+          post '/cart/add_item', params: { product_id: product.id, quantity: -2 }, as: :json
+        }.to change { cart_item.reload.quantity }.by(-2)
+      end
+    end
+
+    context 'with invalid quantity' do
+      before { post '/cart', params: { product_id: product.id, quantity: 1 }, as: :json }
+
+      it 'rejects zero quantity' do
+        post '/cart/add_item', params: { product_id: product.id, quantity: 0 }, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+
+      it 'rejects negative quantity when result would drop below 1' do
+        post '/cart/add_item', params: { product_id: product.id, quantity: -1 }, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+
+      it 'does not change the quantity' do
+        cart_item = CartItem.last
+        expect {
+          post '/cart/add_item', params: { product_id: product.id, quantity: 0 }, as: :json
+        }.not_to change { cart_item.reload.quantity }
       end
     end
   end
