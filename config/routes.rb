@@ -4,7 +4,7 @@ Rails.application.routes.draw do
   mount Sidekiq::Web => '/sidekiq'
 
   # Carts
-  resources :cart, only: %i[ create ], controller: :carts
+  resource :cart, only: %i[show create], controller: :carts
 
   resources :products
   get "up" => "rails/health#show", as: :rails_health_check

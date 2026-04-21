@@ -1,5 +1,6 @@
 class CartsController < ApplicationController
-  before_action :set_cart, only: %i[ create ]
+  before_action :set_or_create_cart, only: %i[create]
+  before_action :set_cart, only: %i[show]
 
   def create
     if @cart.add_item(cart_params)
@@ -9,11 +10,24 @@ class CartsController < ApplicationController
     end
   end
 
+  def show
+    render json: CartSerializer.new(@cart).as_json
+  end
+
   private
 
-    def set_cart
-      @cart = Cart.find_by(id: session[:cart_id]) || Cart.create!
+    def set_or_create_cart
+      @cart = find_cart || Cart.create!
       session[:cart_id] = @cart.id
+    end
+
+    def set_cart
+      @cart = find_cart
+      render json: { error: 'Cart not found' }, status: :not_found unless @cart
+    end
+
+    def find_cart
+      Cart.find_by(id: session[:cart_id])
     end
 
     def cart_params
