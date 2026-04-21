@@ -1,6 +1,6 @@
 class CartsController < ApplicationController
   before_action :set_or_create_cart, only: %i[create]
-  before_action :set_cart, only: %i[show add_item]
+  before_action :set_cart, only: %i[show add_item remove_item]
 
   def create
     if @cart.add_item(cart_params)
@@ -22,6 +22,14 @@ class CartsController < ApplicationController
     render json: CartSerializer.new(@cart).as_json
   end
 
+  def remove_item
+    if @cart.remove_item(item_to_remove)
+      render json: CartSerializer.new(@cart).as_json
+    else
+      render json: @cart.errors, status: :unprocessable_entity
+    end
+  end
+
   private
 
     def set_or_create_cart
@@ -40,5 +48,9 @@ class CartsController < ApplicationController
 
     def cart_params
       params.permit(:product_id, :quantity)
+    end
+
+    def item_to_remove
+      params.permit(:product_id)[:product_id]
     end
 end

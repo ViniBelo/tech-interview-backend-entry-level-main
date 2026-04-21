@@ -22,6 +22,27 @@ class Cart < ApplicationRecord
     modify_cart(cart_item) { |product_id:, quantity:| update_cart_quantity_and_total_price(product_id:, quantity:) }
   end
 
+  def remove_item(product_id)
+    item = cart_items.find_by(product_id:)
+
+    unless item
+      errors.add(:product_id, 'Product not present in cart')
+      return false
+    end
+
+    transaction do
+      item.destroy!
+      recalculate_total!
+      update_last_interaction_at!
+      destroy! if cart_items.reload.empty?
+    end
+
+    true
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed => e
+    errors.merge!(e.record.errors)
+    false
+  end
+
   private
 
     def modify_cart(cart_item)
