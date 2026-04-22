@@ -30,7 +30,7 @@ services:
         - redis_data:/data
     web:
         <<: *app
-        command: bundle exec rails server -b 0.0.0.0
+        command: sh -c "bundle exec rails db:create db:migrate db:seed && bundle exec rails server -b 0.0.0.0"
         ports:
             - 3000:3000
     sidekiq:

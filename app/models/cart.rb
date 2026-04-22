@@ -4,6 +4,7 @@ class Cart < ApplicationRecord
   has_many :cart_items, dependent: :destroy
 
   def mark_as_abandoned = update(abandoned: true)
+  def mark_as_unabandoned = update(abandoned: false)
 
   def remove_if_abandoned
     destroy if abandoned_for_a_week_or_more?
@@ -33,6 +34,7 @@ class Cart < ApplicationRecord
     transaction do
       item.destroy!
       recalculate_total!
+      mark_as_unabandoned
       update_last_interaction_at!
       destroy! if cart_items.reload.empty?
     end
@@ -52,6 +54,7 @@ class Cart < ApplicationRecord
       transaction do
         yield(product_id:, quantity:)
         recalculate_total!
+        mark_as_unabandoned
         update_last_interaction_at!
       end
 
