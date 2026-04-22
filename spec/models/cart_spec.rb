@@ -9,6 +9,39 @@ RSpec.describe Cart, type: :model do
     end
   end
 
+  describe 'after_create' do
+    before { allow(MarkCartAsAbandonedJob).to receive(:perform_in) }
+
+    it 'schedules the abandoned job on creation' do
+      cart = create(:shopping_cart)
+      expect(MarkCartAsAbandonedJob).to have_received(:perform_in).with(cart.last_interaction_at + Cart::INACTIVITY_THRESHOLD, cart.id)
+    end
+
+    it 'does not schedule the job on update' do
+      cart = create(:shopping_cart)
+      expect(MarkCartAsAbandonedJob).to have_received(:perform_in).once
+      cart.update(total_price: 0)
+      expect(MarkCartAsAbandonedJob).to have_received(:perform_in).once
+    end
+  end
+
+  describe '#idle?' do
+    it 'returns true when last interaction was beyond the threshold' do
+      cart = build(:shopping_cart, last_interaction_at: (Cart::INACTIVITY_THRESHOLD + 1.minute).ago)
+      expect(cart.idle?).to be true
+    end
+
+    it 'returns false when last interaction was within the threshold' do
+      cart = build(:shopping_cart, last_interaction_at: 1.hour.ago)
+      expect(cart.idle?).to be false
+    end
+
+    it 'returns true when last interaction was exactly at the threshold' do
+      cart = build(:shopping_cart, last_interaction_at: Cart::INACTIVITY_THRESHOLD.ago)
+      expect(cart.idle?).to be true
+    end
+  end
+
   describe 'mark_as_abandoned' do
     let(:shopping_cart) { create(:shopping_cart) }
 
