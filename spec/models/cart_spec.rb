@@ -52,7 +52,7 @@ RSpec.describe Cart, type: :model do
   end
 
   describe 'remove_if_abandoned' do
-    let(:shopping_cart) { create(:shopping_cart, last_interaction_at: 7.days.ago) }
+    let(:shopping_cart) { create(:shopping_cart, last_interaction_at: (7.days + Cart::INACTIVITY_THRESHOLD).ago) }
 
     it 'removes the shopping cart if abandoned for a certain time' do
       shopping_cart.mark_as_abandoned

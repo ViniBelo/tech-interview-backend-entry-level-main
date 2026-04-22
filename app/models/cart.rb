@@ -54,7 +54,7 @@ class Cart < ApplicationRecord
   private
 
     def schedule_job_to_mark_as_abandoned
-      MarkCartAsAbandonedJob.perform_in(last_interaction_at + 3.hours, id)
+      MarkCartAsAbandonedJob.perform_in(last_interaction_at + INACTIVITY_THRESHOLD, id)
     end
 
     def modify_cart(cart_item)
@@ -77,7 +77,7 @@ class Cart < ApplicationRecord
     def abandoned_for_a_week_or_more?
       return false unless abandoned?
 
-      last_interaction_at.before?(7.days.ago)
+      last_interaction_at.before?((7.days + INACTIVITY_THRESHOLD).ago)
     end
 
     def upsert_cart_item(product_id:, quantity:)
