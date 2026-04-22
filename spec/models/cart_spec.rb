@@ -65,5 +65,94 @@ RSpec.describe Cart, type: :model do
       shopping_cart.add_item(product_id: product.id, quantity: 0)
       expect(shopping_cart.errors).not_to be_empty
     end
+
+    it 'marks the cart as unabandoned' do
+      shopping_cart.update(abandoned: true)
+      shopping_cart.add_item(product_id: product.id, quantity: 1)
+      expect(shopping_cart.reload.abandoned).to be false
+    end
+
+    it 'updates last_interaction_at' do
+      last_interaction_at = shopping_cart.last_interaction_at
+      shopping_cart.add_item(product_id: product.id, quantity: 1)
+      expect(shopping_cart.reload.last_interaction_at).not_to eq(last_interaction_at)
+    end
+  end
+
+  describe 'change_item_quantity' do
+    let(:shopping_cart) { create(:shopping_cart) }
+    let(:product) { create(:product) }
+
+    before { shopping_cart.add_item(product_id: product.id, quantity: 2) }
+
+    it 'increases the quantity' do
+      shopping_cart.change_item_quantity(product_id: product.id, quantity: 3)
+      expect(shopping_cart.cart_items.first.reload.quantity).to eq(5)
+    end
+
+    it 'decreases the quantity when result stays above 0' do
+      shopping_cart.change_item_quantity(product_id: product.id, quantity: -1)
+      expect(shopping_cart.cart_items.first.reload.quantity).to eq(1)
+    end
+
+    it 'recalculates the total price' do
+      shopping_cart.change_item_quantity(product_id: product.id, quantity: 1)
+      expect(shopping_cart.reload.total_price).to eq(product.price * 3)
+    end
+
+    it 'returns false when quantity is zero' do
+      result = shopping_cart.change_item_quantity(product_id: product.id, quantity: 0)
+      expect(result).to be false
+    end
+
+    it 'adds errors when quantity is zero' do
+      shopping_cart.change_item_quantity(product_id: product.id, quantity: 0)
+      expect(shopping_cart.errors).not_to be_empty
+    end
+  end
+
+  describe 'remove_item' do
+    let(:shopping_cart) { create(:shopping_cart) }
+    let(:product) { create(:product) }
+
+    before { shopping_cart.add_item(product_id: product.id, quantity: 2) }
+
+    it 'removes the item from the cart' do
+      expect { shopping_cart.remove_item(product.id) }.to change(CartItem, :count).by(-1)
+    end
+
+    it 'destroys the cart when the last item is removed' do
+      expect { shopping_cart.remove_item(product.id) }.to change(Cart, :count).by(-1)
+    end
+
+    it 'returns true on success' do
+      expect(shopping_cart.remove_item(product.id)).to be true
+    end
+
+    it 'returns false when product is not in the cart' do
+      other_product = create(:product)
+      expect(shopping_cart.remove_item(other_product.id)).to be false
+    end
+
+    it 'adds errors when product is not in the cart' do
+      other_product = create(:product)
+      shopping_cart.remove_item(other_product.id)
+      expect(shopping_cart.errors).not_to be_empty
+    end
+
+    context 'when cart has multiple items' do
+      let(:other_product) { create(:product) }
+
+      before { shopping_cart.add_item(product_id: other_product.id, quantity: 1) }
+
+      it 'does not destroy the cart' do
+        expect { shopping_cart.remove_item(product.id) }.not_to change(Cart, :count)
+      end
+
+      it 'recalculates total_price without the removed item' do
+        shopping_cart.remove_item(product.id)
+        expect(shopping_cart.reload.total_price).to eq(other_product.price)
+      end
+    end
   end
 end
