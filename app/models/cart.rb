@@ -3,8 +3,14 @@ class Cart < ApplicationRecord
 
   has_many :cart_items, dependent: :destroy
 
+  after_create :schedule_job_to_mark_as_abandoned
+
   def mark_as_abandoned = update(abandoned: true)
   def mark_as_unabandoned = update(abandoned: false)
+
+  INACTIVITY_THRESHOLD = 3.hours
+
+  def idle? = last_interaction_at.before?(INACTIVITY_THRESHOLD.ago)
 
   def remove_if_abandoned
     destroy if abandoned_for_a_week_or_more?
@@ -46,6 +52,10 @@ class Cart < ApplicationRecord
   end
 
   private
+
+    def schedule_job_to_mark_as_abandoned
+      MarkCartAsAbandonedJob.perform_in(last_interaction_at + 3.hours, id)
+    end
 
     def modify_cart(cart_item)
       product_id = cart_item[:product_id]
