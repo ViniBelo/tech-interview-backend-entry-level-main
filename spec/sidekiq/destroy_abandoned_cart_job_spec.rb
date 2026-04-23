@@ -11,12 +11,9 @@ RSpec.describe DestroyAbandonedCartJob, type: :job do
     end
 
     context 'when cart is abandoned and old enough' do
-      let(:cart) { create(:shopping_cart, abandoned: true, last_interaction_at: (7.days + Cart::INACTIVITY_THRESHOLD).ago) }
+      let(:cart) { create(:shopping_cart, abandoned: true, last_interaction_at: (Cart::ABANDONMENT_PERIOD + Cart::INACTIVITY_THRESHOLD).ago) }
 
-      before do
-        allow(MarkCartAsAbandonedJob).to receive(:perform_in)
-        cart
-      end
+      before { cart; Sidekiq::Worker.clear_all }
 
       it 'destroys the cart' do
         expect { perform }.to change { Cart.count }.by(-1)
@@ -24,12 +21,9 @@ RSpec.describe DestroyAbandonedCartJob, type: :job do
     end
 
     context 'when cart is not abandoned' do
-      let(:cart) { create(:shopping_cart, last_interaction_at: (7.days + Cart::INACTIVITY_THRESHOLD).ago) }
+      let(:cart) { create(:shopping_cart, last_interaction_at: (Cart::ABANDONMENT_PERIOD + Cart::INACTIVITY_THRESHOLD).ago) }
 
-      before do
-        allow(MarkCartAsAbandonedJob).to receive(:perform_in)
-        cart
-      end
+      before { cart; Sidekiq::Worker.clear_all }
 
       it 'does not destroy the cart' do
         expect { perform }.not_to change { Cart.count }
@@ -39,10 +33,7 @@ RSpec.describe DestroyAbandonedCartJob, type: :job do
     context 'when cart is abandoned but less than a week ago' do
       let(:cart) { create(:shopping_cart, abandoned: true, last_interaction_at: 3.days.ago) }
 
-      before do
-        allow(MarkCartAsAbandonedJob).to receive(:perform_in)
-        cart
-      end
+      before { cart; Sidekiq::Worker.clear_all }
 
       it 'does not destroy the cart' do
         expect { perform }.not_to change { Cart.count }

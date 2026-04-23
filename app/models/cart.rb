@@ -78,7 +78,7 @@ class Cart < ApplicationRecord
     def abandoned_for_a_week_or_more?
       return false unless abandoned?
 
-      last_interaction_at.before?((7.days + INACTIVITY_THRESHOLD).ago)
+      last_interaction_at.before?((ABANDONMENT_PERIOD + INACTIVITY_THRESHOLD).ago)
     end
 
     def upsert_cart_item(product_id:, quantity:)
