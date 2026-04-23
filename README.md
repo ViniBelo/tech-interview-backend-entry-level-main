@@ -189,6 +189,39 @@ A aplicação já possui um Dockerfile, que define como a aplicação deve ser c
 - postgres 16
 - redis 7.0.15
 
+### Variáveis de ambiente
+
+A aplicação utiliza diferentes arquivos `.env` dependendo do contexto de execução. Crie os arquivos abaixo antes de rodar o projeto.
+
+#### `.env` — usado pelo Docker (docker-compose)
+```env
+DATABASE_URL=postgresql://postgres:senha123@db:5432
+DATABASE_NAME_DEVELOPMENT=store_development
+DATABASE_NAME_TEST=store_test
+DATABASE_NAME_PRODUCTION=store_production
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=senha123
+```
+
+#### `.env.local` — usado ao rodar a aplicação localmente (sem Docker)
+```env
+DATABASE_URL=postgresql://postgres:senha123@localhost:5432
+DATABASE_NAME_DEVELOPMENT=store_development
+DATABASE_NAME_TEST=store_test
+DATABASE_NAME_PRODUCTION=store_production
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=senha123
+```
+
+#### `.env.test.local` — usado ao rodar os testes localmente (sem Docker)
+```env
+DATABASE_URL=postgresql://postgres:senha123@localhost:5432
+```
+
+> Ajuste os valores de usuário e senha conforme a sua configuração local do PostgreSQL.
+
+---
+
 ### Como executar o projeto
 
 ## Executando a app sem o docker
