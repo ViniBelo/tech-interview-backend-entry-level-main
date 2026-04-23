@@ -5,7 +5,10 @@ class MarkCartAsAbandonedJob
     cart = Cart.find_by(id: cart_id)
     return unless cart
 
-    cart.mark_as_abandoned if cart.idle?
+    if cart.idle?
+      cart.mark_as_abandoned
+      DestroyAbandonedCartJob.perform_in(cart.last_interaction_at + 7.days, cart_id)
+    end
 
     self.class.perform_in(cart.last_interaction_at + Cart::INACTIVITY_THRESHOLD, cart_id)
   end
