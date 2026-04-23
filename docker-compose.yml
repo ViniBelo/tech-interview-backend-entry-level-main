@@ -6,7 +6,7 @@ x-app: &app
         - db
         - redis
     environment:
-        - DATABASE_URL=${DATABASE_URL}/${DATABASE_NAME_PRODUCTION}
+        - DATABASE_URL=${DATABASE_URL}/${DATABASE_NAME_DEVELOPMENT}
         - REDIS_URL=redis://redis:6379/0
 
 services:
@@ -27,7 +27,7 @@ services:
         - redis_data:/data
     web:
         <<: *app
-        command: bundle exec rails server -b 0.0.0.0
+        command: ./bin/rails server -b 0.0.0.0
         ports:
             - 3000:3000
     sidekiq:
