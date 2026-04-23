@@ -209,8 +209,6 @@ DATABASE_URL=postgresql://postgres:senha123@localhost:5432
 DATABASE_NAME_DEVELOPMENT=store_development
 DATABASE_NAME_TEST=store_test
 DATABASE_NAME_PRODUCTION=store_production
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=senha123
 ```
 
 #### `.env.test.local` — usado ao rodar os testes localmente (sem Docker)
