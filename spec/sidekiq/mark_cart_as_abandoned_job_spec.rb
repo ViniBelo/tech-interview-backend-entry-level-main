@@ -20,6 +20,7 @@ RSpec.describe MarkCartAsAbandonedJob, type: :job do
 
       before do
         allow(described_class).to receive(:perform_in)
+        allow(DestroyAbandonedCartJob).to receive(:perform_in)
         cart
       end
 
@@ -36,7 +37,14 @@ RSpec.describe MarkCartAsAbandonedJob, type: :job do
       end
 
       it 'reschedules the job' do
+        allow(DestroyAbandonedCartJob).to receive(:perform_in)
         expect(described_class).to receive(:perform_in).with(cart.last_interaction_at + Cart::INACTIVITY_THRESHOLD, cart.id)
+        perform
+      end
+
+      it 'schedules the destroy job' do
+        allow(described_class).to receive(:perform_in)
+        expect(DestroyAbandonedCartJob).to receive(:perform_in).with(cart.last_interaction_at + 7.days, cart.id)
         perform
       end
     end
@@ -58,6 +66,12 @@ RSpec.describe MarkCartAsAbandonedJob, type: :job do
 
       it 'reschedules the job' do
         expect(described_class).to receive(:perform_in).with(cart.last_interaction_at + Cart::INACTIVITY_THRESHOLD, cart.id)
+        perform
+      end
+
+      it 'does not schedule the destroy job' do
+        allow(described_class).to receive(:perform_in)
+        expect(DestroyAbandonedCartJob).not_to receive(:perform_in)
         perform
       end
     end
