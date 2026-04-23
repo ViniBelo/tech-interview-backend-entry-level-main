@@ -1,8 +1,14 @@
 #!/bin/bash -e
 
-# If running the rails server then create or migrate existing database
 if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
+  fresh_db=false
+  ./bin/rails runner "exit(1) if ActiveRecord::Base.connection.tables.any?" 2>/dev/null && fresh_db=true || true
+
   ./bin/rails db:prepare
+
+  if [ "$fresh_db" = "true" ]; then
+    ./bin/rails db:seed
+  fi
 fi
 
 exec "${@}"
