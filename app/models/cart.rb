@@ -9,6 +9,7 @@ class Cart < ApplicationRecord
   def mark_as_unabandoned = update(abandoned: false)
 
   INACTIVITY_THRESHOLD = 3.hours
+  ABANDONMENT_PERIOD = 7.days
 
   def idle? = last_interaction_at.before?(INACTIVITY_THRESHOLD.ago)
 

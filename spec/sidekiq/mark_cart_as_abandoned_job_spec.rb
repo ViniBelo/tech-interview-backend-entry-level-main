@@ -32,20 +32,24 @@ RSpec.describe MarkCartAsAbandonedJob, type: :job do
     context 'when cart is idle' do
       let(:cart) { create(:shopping_cart, last_interaction_at: 4.hours.ago) }
 
+      before do
+        allow(described_class).to receive(:perform_in)
+        allow(DestroyAbandonedCartJob).to receive(:perform_in)
+        cart
+      end
+
       it 'marks the cart as abandoned' do
         expect { perform }.to change { cart.reload.abandoned }.from(false).to(true)
       end
 
-      it 'reschedules the job' do
-        allow(DestroyAbandonedCartJob).to receive(:perform_in)
-        expect(described_class).to receive(:perform_in).with(cart.last_interaction_at + Cart::INACTIVITY_THRESHOLD, cart.id)
+      it 'does not reschedule the job' do
+        expect(described_class).not_to receive(:perform_in)
         perform
       end
 
       it 'schedules the destroy job' do
-        allow(described_class).to receive(:perform_in)
-        expect(DestroyAbandonedCartJob).to receive(:perform_in).with(cart.last_interaction_at + 7.days, cart.id)
         perform
+        expect(DestroyAbandonedCartJob).to have_received(:perform_in).with(cart.reload.updated_at + Cart::ABANDONMENT_PERIOD, cart.id)
       end
     end
 
