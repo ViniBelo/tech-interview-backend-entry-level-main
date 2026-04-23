@@ -1,4 +1,6 @@
 class CartsController < ApplicationController
+  wrap_parameters false
+
   before_action :set_or_create_cart, only: %i[create]
   before_action :set_cart, only: %i[show add_item remove_item]
 
